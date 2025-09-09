@@ -13,6 +13,8 @@ import (
 
 func main() {
 
+	fmt.Println("system started")
+
 	err := godotenv.Load(`cmd\api\.env`)
 	if err != nil {
 		fmt.Println("Failed to load env")
@@ -33,11 +35,15 @@ func main() {
 
 	url := "https://api.groq.com/openai/v1/chat/completions"
 
+	// additional system prompt for main app:
+	// Interprit which language the user is using and respond in the laguage
+	language := "assamese"
+
 	reqBody := map[string]any{
-		"model": "llama-3.1-8b-instant", // choose a model available to you
+		"model": "openai/gpt-oss-20b", // choose a model available to you
 		"messages": []map[string]string{
-			{"role": "system", "content": systemPrompt},
-			{"role": "user", "content": "Explain goroutines."},
+			{"role": "system", "content": systemPrompt + " always reply in " + language + "language."},
+			{"role": "user", "content": "What is valorant."},
 		},
 		"temperature": 0.2,
 	}
@@ -55,6 +61,9 @@ func main() {
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
+		if resp.StatusCode == 429 {
+			panic("Api requests expired for the day or minute")
+		}
 		body, _ := io.ReadAll(resp.Body)
 		panic(fmt.Sprintf("error: %s %s", resp.Status, string(body)))
 	}
@@ -73,7 +82,7 @@ func main() {
 
 		if ok {
 			msg, ok := ch0["message"].(map[string]any)
-			
+
 			if ok {
 				fmt.Println("assistant:", msg["content"])
 			}
